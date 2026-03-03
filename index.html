@@ -13,6 +13,7 @@
         .selector-mes { display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 20px; background: #eee; padding: 10px; border-radius: 10px; }
         .balance-card { text-align: center; font-size: 1.8em; font-weight: bold; background: var(--cafe); color: white; padding: 15px; border-radius: 15px; margin-bottom: 20px; }
         
+        /* Gráficos de Tazas */
         .graficos-tazas { display: flex; justify-content: space-around; align-items: flex-end; margin: 30px 0; gap: 10px; }
         .taza-col { text-align: center; flex: 1; }
         .taza-wrapper { position: relative; width: 70px; height: 55px; margin: 0 auto; border: 4px solid var(--cafe); border-radius: 5px 5px 30px 30px; background: #fff; overflow: hidden; }
@@ -34,12 +35,11 @@
         .historial { margin-top: 20px; max-height: 200px; overflow-y: auto; font-size: 0.9em; border-top: 1px solid #ddd; padding-top: 10px; }
         .item-mov { padding: 6px 0; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; }
         
-        #reporte-impresion { display: none; }
         @media print { 
             .no-print { display: none; } 
-            #reporte-impresion { display: block; }
             body { background: white; padding: 0; }
-            .container { box-shadow: none; max-width: 100%; }
+            .container { box-shadow: none; max-width: 100%; border: none; }
+            .historial { max-height: none; overflow: visible; }
         }
     </style>
 </head>
@@ -54,7 +54,9 @@
         </div>
 
         <div class="balance-card">Saldo: $<span id="saldo-total">0</span></div>
+    </div>
 
+    <div id="seccion-reporte">
         <div class="graficos-tazas">
             <div class="taza-col">
                 <div style="position: relative; width: fit-content; margin: auto;">
@@ -79,6 +81,12 @@
             </div>
         </div>
 
+        <h3 id="titulo-historial">Movimientos del Mes</h3>
+        <div id="lista-movimientos" class="historial"></div>
+    </div>
+
+    <div class="no-print">
+        <hr>
         <h3>➕ Registrar Aporte</h3>
         <input type="text" id="prof-nombre" placeholder="Nombre (Opcional)">
         <input type="tel" id="prof-tel" placeholder="WhatsApp (Ej: 57300...)">
@@ -91,17 +99,12 @@
         <button class="btn-gasto" onclick="agregarRegistro('gasto')">Registrar Gasto</button>
 
         <hr>
-        <button class="btn-wa" onclick="enviarWhatsApp('mes')">📲 Enviar Reporte del Mes</button>
-        <button class="btn-total" onclick="enviarWhatsApp('total')">🌎 Enviar Acumulado Histórico</button>
-        <button class="btn-print" onclick="imprimir('mes')">🖨️ Imprimir Mes</button>
-        <button class="btn-print" style="background-color: #37474f;" onclick="imprimir('total')">📜 Imprimir Acumulado</button>
+        <button class="btn-wa" onclick="enviarWhatsApp('mes')">📲 Reporte del Mes (WhatsApp)</button>
+        <button class="btn-total" onclick="enviarWhatsApp('total')">🌎 Reporte Anual (WhatsApp)</button>
+        <button class="btn-print" onclick="prepararImpresion('mes')">🖨️ Imprimir Balance Mensual</button>
+        <button class="btn-print" style="background-color: #37474f;" onclick="prepararImpresion('total')">📜 Imprimir Balance Anual</button>
         
         <button onclick="limpiarDatos()" style="background:none; color: grey; font-size: 11px; margin-top:10px;">Borrar todo el historial</button>
-    </div>
-
-    <div id="seccion-lista">
-        <h3 id="titulo-historial">Movimientos del Mes</h3>
-        <div id="lista-movimientos" class="historial"></div>
     </div>
 </div>
 
@@ -134,6 +137,14 @@
         return { ingresos: totalI, gastos: totalG, saldo: totalI - totalG };
     }
 
+    function actualizarGraficos(ingresos, gastos, saldo) {
+        document.getElementById('taza-ingresos').style.height = ingresos > 0 ? "100%" : "0%";
+        let porcGasto = ingresos > 0 ? (gastos / ingresos) * 100 : 0;
+        document.getElementById('taza-gastos').style.height = Math.min(porcGasto, 100) + "%";
+        let porcSaldo = ingresos > 0 ? (saldo / ingresos) * 100 : 0;
+        document.getElementById('taza-saldo').style.height = Math.max(0, Math.min(porcSaldo, 100)) + "%";
+    }
+
     function actualizarInterfaz() {
         let mesSel = selectMes.value;
         asegurarMes(mesSel);
@@ -143,12 +154,7 @@
         document.getElementById('saldo-total').innerText = saldo.toLocaleString();
         document.getElementById('titulo-historial').innerText = `Movimientos: ${selectMes.options[selectMes.selectedIndex].text}`;
         
-        // Gráficos de tazas
-        document.getElementById('taza-ingresos').style.height = datos.ingresos > 0 ? "100%" : "0%";
-        let porcGasto = datos.ingresos > 0 ? (datos.gastos / datos.ingresos) * 100 : 0;
-        document.getElementById('taza-gastos').style.height = Math.min(porcGasto, 100) + "%";
-        let porcSaldo = datos.ingresos > 0 ? (saldo / datos.ingresos) * 100 : 0;
-        document.getElementById('taza-saldo').style.height = Math.max(0, Math.min(porcSaldo, 100)) + "%";
+        actualizarGraficos(datos.ingresos, datos.gastos, saldo);
 
         const lista = document.getElementById('lista-movimientos');
         lista.innerHTML = datos.historial.map(m => `
@@ -157,6 +163,25 @@
                 <span>$${m.monto.toLocaleString()}</span>
             </div>
         `).reverse().join('');
+    }
+
+    function prepararImpresion(modo) {
+        const originalTitle = document.getElementById('titulo-historial').innerText;
+        const originalSaldo = document.getElementById('saldo-total').innerText;
+
+        if (modo === 'total') {
+            let ac = calcularAcumulado();
+            document.getElementById('titulo-historial').innerText = `REPORTE ANUAL ACUMULADO\nIngresos: $${ac.ingresos.toLocaleString()} | Gastos: $${ac.gastos.toLocaleString()}`;
+            document.getElementById('saldo-total').innerText = ac.saldo.toLocaleString();
+            actualizarGraficos(ac.ingresos, ac.gastos, ac.saldo);
+        }
+
+        window.print();
+
+        // Restaurar vista original después de imprimir
+        document.getElementById('titulo-historial').innerText = originalTitle;
+        document.getElementById('saldo-total').innerText = originalSaldo;
+        actualizarInterfaz();
     }
 
     function agregarRegistro(tipo) {
@@ -177,10 +202,8 @@
             if (tipo === 'ingreso') {
                 db[mesSel].ingresos += monto;
                 if(tel !== "") {
-                    if(confirm("¿Enviar recibo por WhatsApp?")) {
-                        let msg = `✅ *Recibo Cafetería*\n${nombre}: Aporte de $${monto}.`;
-                        window.open(`https://wa.me/${tel}?text=${encodeURIComponent(msg)}`);
-                    }
+                    let msg = `✅ *Recibo Cafetería*\n${nombre}: Aporte de $${monto}.`;
+                    if(confirm("¿Enviar recibo por WhatsApp?")) window.open(`https://wa.me/${tel}?text=${encodeURIComponent(msg)}`);
                 }
             } else {
                 db[mesSel].gastos += monto;
@@ -192,26 +215,15 @@
         }
     }
 
-    function imprimir(modo) {
-        const originalTitle = document.getElementById('titulo-historial').innerText;
-        if (modo === 'total') {
-            let ac = calcularAcumulado();
-            document.getElementById('titulo-historial').innerText = `REPORTE ACUMULADO HISTÓRICO\nIngresos Totales: $${ac.ingresos}\nGastos Totales: $${ac.gastos}\nSaldo Global: $${ac.saldo}`;
-            // Ocultar lista temporalmente para el reporte global o dejarla si quieres ver todo
-        }
-        window.print();
-        document.getElementById('titulo-historial').innerText = originalTitle;
-    }
-
     function enviarWhatsApp(modo) {
         let mensaje = "";
         if (modo === 'mes') {
             let mesNombre = selectMes.options[selectMes.selectedIndex].text;
             let d = db[selectMes.value];
-            mensaje = `☕ *BALANCE MENSUAL - ${mesNombre.toUpperCase()}*\n➕ Ingresos: $${d.ingresos}\n➖ Gastos: $${d.gastos}\n💰 *Saldo: $${d.ingresos - d.gastos}*`;
+            mensaje = `☕ *BALANCE MENSUAL - ${mesNombre.toUpperCase()}*\n➕ Ingresos: $${d.ingresos.toLocaleString()}\n➖ Gastos: $${d.gastos.toLocaleString()}\n💰 *Saldo: $${(d.ingresos - d.gastos).toLocaleString()}*`;
         } else {
             let ac = calcularAcumulado();
-            mensaje = `🌎 *REPORTE ACUMULADO (TODOS LOS MESES)*\n💰 Ingresos Totales: $${ac.ingresos}\n💸 Gastos Totales: $${ac.gastos}\n💎 *SALDO GLOBAL: $${ac.saldo}*`;
+            mensaje = `🌎 *REPORTE ANUAL ACUMULADO*\n💰 Ingresos Totales: $${ac.ingresos.toLocaleString()}\n💸 Gastos Totales: $${ac.gastos.toLocaleString()}\n💎 *SALDO GLOBAL: $${ac.saldo.toLocaleString()}*`;
         }
         window.open(`https://wa.me/?text=${encodeURIComponent(mensaje)}`);
     }
