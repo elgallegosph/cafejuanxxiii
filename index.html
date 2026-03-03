@@ -25,6 +25,11 @@
         .liq-gasto { background: var(--rojo) !important; -webkit-print-color-adjust: exact; }
         .liq-saldo { background: #6f4e37 !important; -webkit-print-color-adjust: exact; }
 
+        /* Cuadro de Totales para Impresión */
+        .tabla-totales { width: 100%; border-collapse: collapse; margin: 20px 0; display: none; }
+        .tabla-totales td, .tabla-totales th { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        .tabla-totales th { background-color: #f8f8f8; }
+
         input, select { width: calc(100% - 22px); padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; }
         button { width: 100%; padding: 14px; margin: 8px 0; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s; font-size: 15px; }
         .btn-aporte { background-color: var(--verde); color: white; }
@@ -43,6 +48,7 @@
             .container { box-shadow: none; max-width: 100%; border: none; }
             .historial { max-height: none; overflow: visible; }
             .taza-wrapper { border: 2px solid #000; }
+            .tabla-totales { display: table; }
         }
     </style>
 </head>
@@ -81,6 +87,20 @@
                 <p><strong>Saldo</strong><br><span class="val-taza" id="txt-saldo">$0</span></p>
             </div>
         </div>
+
+        <table class="tabla-totales" id="tabla-totales-print">
+            <thead>
+                <tr>
+                    <th>Concepto</th>
+                    <th>Valor Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>Total Ingresos</td><td id="td-ingresos">$0</td></tr>
+                <tr><td>Total Gastos</td><td id="td-gastos">$0</td></tr>
+                <tr style="font-weight: bold;"><td>Saldo Neto</td><td id="td-saldo">$0</td></tr>
+            </tbody>
+        </table>
 
         <h3 id="titulo-historial">Movimientos del Mes</h3>
         <div id="lista-movimientos" class="historial"></div>
@@ -147,9 +167,18 @@
         let porcSaldo = ingresos > 0 ? (saldo / ingresos) * 100 : 0;
         document.getElementById('taza-saldo').style.height = Math.max(0, Math.min(porcSaldo, 100)) + "%";
         
-        document.getElementById('txt-ingresos').innerText = `$${ingresos.toLocaleString()}`;
-        document.getElementById('txt-gastos').innerText = `$${gastos.toLocaleString()}`;
-        document.getElementById('txt-saldo').innerText = `$${saldo.toLocaleString()}`;
+        const iStr = `$${ingresos.toLocaleString()}`;
+        const gStr = `$${gastos.toLocaleString()}`;
+        const sStr = `$${saldo.toLocaleString()}`;
+
+        document.getElementById('txt-ingresos').innerText = iStr;
+        document.getElementById('txt-gastos').innerText = gStr;
+        document.getElementById('txt-saldo').innerText = sStr;
+
+        // Actualizar tabla oculta de impresión
+        document.getElementById('td-ingresos').innerText = iStr;
+        document.getElementById('td-gastos').innerText = gStr;
+        document.getElementById('td-saldo').innerText = sStr;
     }
 
     function actualizarInterfaz() {
@@ -174,13 +203,11 @@
 
     function prepararImpresion(modo) {
         const originalTitle = document.getElementById('titulo-historial').innerText;
-        const originalSaldo = document.getElementById('saldo-total').innerText;
         const originalLista = document.getElementById('lista-movimientos').innerHTML;
 
         if (modo === 'total') {
             let ac = calcularAcumulado();
             document.getElementById('titulo-historial').innerText = `REPORTE MAESTRO - HISTORIAL COMPLETO`;
-            document.getElementById('saldo-total').innerText = ac.saldo.toLocaleString();
             actualizarGraficos(ac.ingresos, ac.gastos, ac.saldo);
             
             document.getElementById('lista-movimientos').innerHTML = ac.historialCompleto.map(m => `
@@ -193,9 +220,7 @@
 
         setTimeout(() => {
             window.print();
-            // Restaurar
             document.getElementById('titulo-historial').innerText = originalTitle;
-            document.getElementById('saldo-total').innerText = originalSaldo;
             document.getElementById('lista-movimientos').innerHTML = originalLista;
             actualizarInterfaz();
         }, 300);
