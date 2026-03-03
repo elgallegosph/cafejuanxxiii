@@ -39,11 +39,12 @@
         .btn-excel { background-color: var(--navy); color: white; }
         
         .historial { margin-top: 20px; max-height: 250px; overflow-y: auto; font-size: 0.9em; border-top: 1px solid #ddd; padding-top: 10px; }
-        .item-mov { padding: 6px 0; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
-        .fecha-mov { font-size: 0.75em; color: #777; display: block; }
+        .item-mov { padding: 8px 0; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .mov-info { display: flex; align-items: center; gap: 8px; }
+        .mov-valores { display: flex; align-items: center; gap: 15px; }
         
-        .btn-del { background: none; border: none; color: #ccc; cursor: pointer; font-size: 14px; padding: 0 5px; }
-        .btn-del:hover { color: var(--rojo); }
+        .btn-del { background: #fee2e2; border: none; color: #ef4444; cursor: pointer; font-size: 14px; padding: 4px 8px; border-radius: 6px; transition: 0.2s; }
+        .btn-del:hover { background: #fca5a5; color: white; }
 
         @media print { 
             .no-print { display: none !important; } 
@@ -52,7 +53,6 @@
             .historial { max-height: none; overflow: visible; }
             .taza-wrapper { border: 2px solid #000; }
             .tabla-totales { display: table; }
-            .btn-del { display: none; }
         }
     </style>
 </head>
@@ -130,7 +130,7 @@
         <button class="btn-print" onclick="prepararImpresion('mes')">🖨️ Imprimir Balance Mensual</button>
         <button class="btn-print" style="background-color: #37474f;" onclick="prepararImpresion('total')">📜 Imprimir Historial Completo</button>
         
-        <button onclick="limpiarDatos()" style="background:none; color: grey; font-size: 11px; margin-top:10px;">Borrar todo el historial</button>
+        <button onclick="limpiarDatos()" style="background:none; color: grey; font-size: 11px; margin-top:10px; cursor:pointer;">Borrar todo el historial</button>
     </div>
 </div>
 
@@ -199,17 +199,19 @@
         const lista = document.getElementById('lista-movimientos');
         lista.innerHTML = datos.historial.map((m, index) => `
             <div class="item-mov">
-                <span>
-                    <button class="btn-del no-print" title="Borrar" onclick="eliminarRegistro('${mesSel}', ${index})">🗑️</button>
+                <div class="mov-info">
                     <strong>${m.tipo === 'ingreso' ? '➕' : '➖'}</strong> ${m.nombre}
-                </span>
-                <span>$${m.monto.toLocaleString()}</span>
+                </div>
+                <div class="mov-valores">
+                    <span>$${m.monto.toLocaleString()}</span>
+                    <button class="btn-del no-print" onclick="eliminarRegistro('${mesSel}', ${index})">🗑️</button>
+                </div>
             </div>
         `).reverse().join('');
     }
 
     function eliminarRegistro(mes, index) {
-        if(confirm("¿Estás seguro de eliminar este registro? Los totales se recalcularán.")) {
+        if(confirm("¿Eliminar este registro? Los totales se actualizarán.")) {
             let registro = db[mes].historial[index];
             if(registro.tipo === 'ingreso') {
                 db[mes].ingresos -= registro.monto;
@@ -224,20 +226,14 @@
 
     function exportarExcel() {
         let ac = calcularAcumulado();
-        if (ac.historialCompleto.length === 0) return alert("No hay datos para exportar.");
-
-        let csvContent = "data:text/csv;charset=utf-8,";
-        csvContent += "Mes,Tipo,Descripcion,Monto\n";
-        
+        if (ac.historialCompleto.length === 0) return alert("No hay datos.");
+        let csvContent = "data:text/csv;charset=utf-8,Mes,Tipo,Descripcion,Monto\n";
         ac.historialCompleto.forEach(m => {
-            let tipo = m.tipo === 'ingreso' ? "Ingreso" : "Gasto";
-            csvContent += `${m.mesLabel},${tipo},${m.nombre},${m.monto}\n`;
+            csvContent += `${m.mesLabel},${m.tipo === 'ingreso' ? "Ingreso" : "Gasto"},${m.nombre},${m.monto}\n`;
         });
-
-        const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", `Reporte_Cafeteria_${new Date().toLocaleDateString()}.csv`);
+        link.setAttribute("href", encodeURI(csvContent));
+        link.setAttribute("download", "Reporte_Cafeteria.csv");
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -246,20 +242,17 @@
     function prepararImpresion(modo) {
         const originalTitle = document.getElementById('titulo-historial').innerText;
         const originalLista = document.getElementById('lista-movimientos').innerHTML;
-
         if (modo === 'total') {
             let ac = calcularAcumulado();
             document.getElementById('titulo-historial').innerText = `REPORTE MAESTRO - HISTORIAL COMPLETO`;
             actualizarGraficos(ac.ingresos, ac.gastos, ac.saldo);
-            
             document.getElementById('lista-movimientos').innerHTML = ac.historialCompleto.map(m => `
                 <div class="item-mov">
-                    <span><small class="fecha-mov">${m.mesLabel}</small> <strong>${m.tipo === 'ingreso' ? '➕' : '➖'}</strong> ${m.nombre}</span>
+                    <span><small>${m.mesLabel}</small> <strong>${m.tipo === 'ingreso' ? '➕' : '➖'}</strong> ${m.nombre}</span>
                     <span>$${m.monto.toLocaleString()}</span>
                 </div>
             `).reverse().join('');
         }
-
         setTimeout(() => {
             window.print();
             document.getElementById('titulo-historial').innerText = originalTitle;
@@ -272,7 +265,6 @@
         let mesSel = selectMes.value;
         asegurarMes(mesSel);
         let nombre, monto, tel = "";
-
         if (tipo === 'ingreso') {
             nombre = document.getElementById('prof-nombre').value || "Anónimo";
             tel = document.getElementById('prof-tel').value || "";
@@ -281,17 +273,13 @@
             nombre = document.getElementById('gasto-nombre').value || "Gasto vario";
             monto = parseFloat(document.getElementById('gasto-monto').value);
         }
-
         if (monto > 0) {
             if (tipo === 'ingreso') {
                 db[mesSel].ingresos += monto;
-                if(tel !== "" && confirm("¿Enviar recibo por WhatsApp?")) {
-                    let msg = `✅ *Recibo Cafetería*\n${nombre}: Recibimos tu aporte de $${monto.toLocaleString()}. ¡Gracias!`;
-                    window.open(`https://wa.me/${tel}?text=${encodeURIComponent(msg)}`);
+                if(tel !== "" && confirm("¿Enviar recibo?")) {
+                    window.open(`https://wa.me/${tel}?text=${encodeURIComponent('✅ *Recibo Cafetería*\n'+nombre+': Recibimos $'+monto.toLocaleString())}`);
                 }
-            } else {
-                db[mesSel].gastos += monto;
-            }
+            } else { db[mesSel].gastos += monto; }
             db[mesSel].historial.push({ tipo, nombre, monto, fecha: new Date().toLocaleDateString() });
             localStorage.setItem('cafeteria_vFinal', JSON.stringify(db));
             limpiarInputs();
@@ -300,16 +288,15 @@
     }
 
     function enviarWhatsApp(modo) {
-        let mensaje = "";
+        let msg = "";
         if (modo === 'mes') {
-            let mesNombre = selectMes.options[selectMes.selectedIndex].text;
             let d = db[selectMes.value];
-            mensaje = `☕ *BALANCE CAFETERÍA - ${mesNombre.toUpperCase()}*\n➕ Ingresos: $${d.ingresos.toLocaleString()}\n➖ Gastos: $${d.gastos.toLocaleString()}\n💰 *Saldo Mes: $${(d.ingresos - d.gastos).toLocaleString()}*`;
+            msg = `☕ *BALANCE ${selectMes.options[selectMes.selectedIndex].text}*\n➕ In: $${d.ingresos.toLocaleString()}\n➖ Out: $${d.gastos.toLocaleString()}\n💰 *Saldo: $${(d.ingresos - d.gastos).toLocaleString()}*`;
         } else {
             let ac = calcularAcumulado();
-            mensaje = `🌎 *BALANCE GLOBAL CAFETERÍA*\n💰 Ingresos Totales: $${ac.ingresos.toLocaleString()}\n💸 Gastos Totales: $${ac.gastos.toLocaleString()}\n💎 *SALDO ACTUAL: $${ac.saldo.toLocaleString()}*`;
+            msg = `🌎 *BALANCE GLOBAL*\n💰 In: $${ac.ingresos.toLocaleString()}\n💸 Out: $${ac.gastos.toLocaleString()}\n💎 *Saldo: $${ac.saldo.toLocaleString()}*`;
         }
-        window.open(`https://wa.me/?text=${encodeURIComponent(mensaje)}`);
+        window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`);
     }
 
     function limpiarInputs() {
@@ -317,10 +304,7 @@
     }
 
     function limpiarDatos() {
-        if(confirm("Se borrará TODO el historial permanentemente. ¿Estás seguro?")) {
-            localStorage.clear();
-            location.reload();
-        }
+        if(confirm("¿Borrar TODO permanentemente?")) { localStorage.clear(); location.reload(); }
     }
 
     actualizarInterfaz();
