@@ -3,31 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cafetería Escolar - Mensual</title>
+    <title>Cafetería Escolar - Reporte Visual</title>
     <style>
-        :root { --cafe: #4e342e; --crema: #f4f1ea; --accent: #795548; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--crema); color: var(--cafe); padding: 20px; display: flex; justify-content: center; }
+        :root { --cafe: #4e342e; --crema: #f4f1ea; --verde: #4caf50; --rojo: #e53935; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--crema); color: var(--cafe); padding: 20px; display: flex; justify-content: center; }
         .container { width: 100%; max-width: 500px; background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
         h1, h3 { text-align: center; margin-bottom: 10px; }
         
         .selector-mes { display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 20px; background: #eee; padding: 10px; border-radius: 10px; }
-        .balance-card { text-align: center; font-size: 1.8em; font-weight: bold; background: var(--cafe); color: white; padding: 20px; border-radius: 15px; margin-bottom: 20px; }
+        .balance-card { text-align: center; font-size: 1.8em; font-weight: bold; background: var(--cafe); color: white; padding: 15px; border-radius: 15px; margin-bottom: 20px; }
         
-        /* Animación de la Taza */
-        .cafe-container { text-align: center; margin: 20px 0; }
-        .taza-wrapper { position: relative; width: 100px; height: 75px; margin: 0 auto; border: 5px solid var(--cafe); border-radius: 5px 5px 40px 40px; background: #fff; overflow: hidden; }
-        .taza-asa { position: absolute; right: -18px; top: 15px; width: 25px; height: 35px; border: 5px solid var(--cafe); border-radius: 50%; z-index: -1; }
-        .liquido { position: absolute; bottom: 0; width: 100%; background: #6f4e37; transition: height 0.8s ease-in-out; }
+        /* Contenedor de Gráficos de Tazas */
+        .graficos-tazas { display: flex; justify-content: space-around; align-items: flex-end; margin: 30px 0; gap: 10px; }
+        .taza-col { text-align: center; flex: 1; }
+        .taza-wrapper { position: relative; width: 70px; height: 55px; margin: 0 auto; border: 4px solid var(--cafe); border-radius: 5px 5px 30px 30px; background: #fff; overflow: hidden; }
+        .taza-asa { position: absolute; right: -12px; top: 12px; width: 18px; height: 25px; border: 4px solid var(--cafe); border-radius: 50%; z-index: -1; }
+        .liquido { position: absolute; bottom: 0; width: 100%; transition: height 0.8s ease-in-out; }
         
+        /* Colores de líquidos */
+        .liq-ingreso { background: var(--verde); }
+        .liq-gasto { background: var(--rojo); }
+        .liq-saldo { background: #6f4e37; }
+
         input, select { width: calc(100% - 22px); padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; }
         button { width: 100%; padding: 14px; margin: 10px 0; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s; font-size: 16px; }
-        .btn-aporte { background-color: #4caf50; color: white; }
-        .btn-gasto { background-color: #e53935; color: white; }
+        .btn-aporte { background-color: var(--verde); color: white; }
+        .btn-gasto { background-color: var(--rojo); color: white; }
         .btn-wa { background-color: #25d366; color: white; }
         .btn-print { background-color: #546e7a; color: white; }
         
-        .historial { margin-top: 20px; max-height: 250px; overflow-y: auto; font-size: 0.9em; border-top: 1px solid #ddd; padding-top: 10px; }
-        .item-mov { padding: 5px 0; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; }
+        .historial { margin-top: 20px; max-height: 200px; overflow-y: auto; font-size: 0.9em; border-top: 1px solid #ddd; padding-top: 10px; }
+        .item-mov { padding: 6px 0; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; }
         @media print { .no-print { display: none; } }
     </style>
 </head>
@@ -38,52 +44,64 @@
         <h1>☕ Cafetería Escolar</h1>
         
         <div class="selector-mes">
-            <label>Mes:</label>
             <select id="mes-filtro" onchange="cambiarMes()"></select>
         </div>
 
         <div class="balance-card">Saldo: $<span id="saldo-total">0</span></div>
 
-        <div class="cafe-container">
-            <div style="position: relative; width: fit-content; margin: auto;">
-                <div class="taza-wrapper">
-                    <div id="cafe-nivel" class="liquido" style="height: 0%;"></div>
+        <div class="graficos-tazas">
+            <div class="taza-col">
+                <div style="position: relative; width: fit-content; margin: auto;">
+                    <div class="taza-wrapper"><div id="taza-ingresos" class="liquido liq-ingreso"></div></div>
+                    <div class="taza-asa"></div>
                 </div>
-                <div class="taza-asa"></div>
+                <p><small>Ingresos</small></p>
             </div>
-            <p><small id="texto-nivel">Nivel de Presupuesto</small></p>
+            <div class="taza-col">
+                <div style="position: relative; width: fit-content; margin: auto;">
+                    <div class="taza-wrapper"><div id="taza-gastos" class="liquido liq-gasto"></div></div>
+                    <div class="taza-asa"></div>
+                </div>
+                <p><small>Gastos</small></p>
+            </div>
+            <div class="taza-col">
+                <div style="position: relative; width: fit-content; margin: auto;">
+                    <div class="taza-wrapper"><div id="taza-saldo" class="liquido liq-saldo"></div></div>
+                    <div class="taza-asa"></div>
+                </div>
+                <p><strong>Saldo</strong></p>
+            </div>
         </div>
 
         <h3>➕ Registrar Aporte</h3>
-        <input type="text" id="prof-nombre" placeholder="Nombre (Opcional)">
+        <input type="text" id="prof-nombre" placeholder="Nombre del Profesor">
         <input type="tel" id="prof-tel" placeholder="WhatsApp (Ej: 57300...)">
         <input type="number" id="prof-monto" placeholder="Monto $">
-        <button class="btn-aporte" onclick="agregarRegistro('ingreso')">Registrar Aporte</button>
+        <button class="btn-aporte" onclick="agregarRegistro('ingreso')">Agregar Aporte</button>
 
         <h3>➖ Registrar Gasto</h3>
-        <input type="text" id="gasto-nombre" placeholder="Concepto (Azúcar, Café...)">
+        <input type="text" id="gasto-nombre" placeholder="¿En qué se gastó?">
         <input type="number" id="gasto-monto" placeholder="Monto $">
         <button class="btn-gasto" onclick="agregarRegistro('gasto')">Registrar Gasto</button>
 
         <hr>
-        <button class="btn-wa" onclick="enviarReporteGeneral()">📲 WhatsApp General</button>
-        <button class="btn-print" onclick="window.print()">🖨️ Imprimir Mes</button>
+        <button class="btn-wa" onclick="enviarReporteGeneral()">📲 Enviar Balance Grupal</button>
+        <button class="btn-print" onclick="window.print()">🖨️ Imprimir Reporte</button>
         <button onclick="limpiarDatos()" style="background:none; color: grey; font-size: 11px;">Borrar todo el historial</button>
     </div>
 
     <div id="seccion-impresion">
-        <h3 id="titulo-historial">Historial</h3>
+        <h3 id="titulo-historial">Movimientos del Mes</h3>
         <div id="lista-movimientos" class="historial"></div>
     </div>
 </div>
 
 <script>
-    // Estructura: { "2024-05": { ingresos: 0, gastos: 0, historial: [] } }
-    let db = JSON.parse(localStorage.getItem('cafeteria_mensual')) || {};
-    
-    // Inicializar selector de meses (6 meses atrás y 6 adelante)
+    let db = JSON.parse(localStorage.getItem('cafeteria_v3')) || {};
     const selectMes = document.getElementById('mes-filtro');
     const ahora = new Date();
+
+    // Generar meses en el selector
     for(let i = -6; i <= 6; i++) {
         let d = new Date(ahora.getFullYear(), ahora.getMonth() + i, 1);
         let valor = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
@@ -94,32 +112,36 @@
         selectMes.appendChild(opcion);
     }
 
-    function getMesActual() { return selectMes.value; }
-
     function asegurarMes() {
-        let mes = getMesActual();
+        let mes = selectMes.value;
         if (!db[mes]) db[mes] = { ingresos: 0, gastos: 0, historial: [] };
     }
 
     function guardar() {
-        localStorage.setItem('cafeteria_mensual', JSON.stringify(db));
+        localStorage.setItem('cafeteria_v3', JSON.stringify(db));
         actualizarInterfaz();
     }
 
     function actualizarInterfaz() {
         asegurarMes();
-        let mes = getMesActual();
-        let datos = db[mes];
+        let datos = db[selectMes.value];
         let saldo = datos.ingresos - datos.gastos;
         
         document.getElementById('saldo-total').innerText = saldo.toLocaleString();
         document.getElementById('titulo-historial').innerText = `Historial - ${selectMes.options[selectMes.selectedIndex].text}`;
         
-        // Animación taza
-        let porcentaje = (datos.ingresos > 0) ? (saldo / datos.ingresos) * 100 : 0;
-        document.getElementById('cafe-nivel').style.height = Math.max(0, Math.min(porcentaje, 100)) + "%";
+        // Lógica de las Tazas (Gráficos)
+        // La taza de ingresos se llena al 100% si hay datos.
+        document.getElementById('taza-ingresos').style.height = datos.ingresos > 0 ? "100%" : "0%";
+        
+        // La taza de gastos muestra qué porcentaje de los ingresos se ha gastado
+        let porcGasto = datos.ingresos > 0 ? (datos.gastos / datos.ingresos) * 100 : 0;
+        document.getElementById('taza-gastos').style.height = Math.min(porcGasto, 100) + "%";
+        
+        // La taza de saldo muestra el remanente
+        let porcSaldo = datos.ingresos > 0 ? (saldo / datos.ingresos) * 100 : 0;
+        document.getElementById('taza-saldo').style.height = Math.max(0, Math.min(porcSaldo, 100)) + "%";
 
-        // Lista de movimientos
         const lista = document.getElementById('lista-movimientos');
         lista.innerHTML = datos.historial.map(m => `
             <div class="item-mov">
@@ -131,7 +153,7 @@
 
     function agregarRegistro(tipo) {
         asegurarMes();
-        let mes = getMesActual();
+        let mes = selectMes.value;
         let nombre, monto, tel = "";
 
         if (tipo === 'ingreso') {
@@ -148,7 +170,7 @@
                 db[mes].ingresos += monto;
                 if(tel !== "") {
                     if(confirm("¿Enviar recibo por WhatsApp?")) {
-                        let msg = `✅ *Recibo Cafetería*\nMes: ${selectMes.options[selectMes.selectedIndex].text}\nHola ${nombre}, recibimos tu aporte de $${monto}.`;
+                        let msg = `✅ *Recibo Cafetería*\nHola ${nombre}, recibimos tu aporte de $${monto}.`;
                         window.open(`https://wa.me/${tel}?text=${encodeURIComponent(msg)}`);
                     }
                 }
@@ -156,33 +178,30 @@
                 db[mes].gastos += monto;
             }
 
-            db[mes].historial.push({ tipo, nombre, monto, fecha: new Date().toLocaleDateString() });
-            
-            document.getElementById('prof-nombre').value = '';
-            document.getElementById('prof-monto').value = '';
-            document.getElementById('prof-tel').value = '';
-            document.getElementById('gasto-nombre').value = '';
-            document.getElementById('gasto-monto').value = '';
-            
+            db[mes].historial.push({ tipo, nombre, monto });
+            limpiarInputs();
             guardar();
         }
+    }
+
+    function limpiarInputs() {
+        ['prof-nombre', 'prof-monto', 'prof-tel', 'gasto-nombre', 'gasto-monto'].forEach(id => {
+            document.getElementById(id).value = '';
+        });
     }
 
     function cambiarMes() { actualizarInterfaz(); }
 
     function enviarReporteGeneral() {
-        let mes = getMesActual();
+        let mes = selectMes.value;
         let d = db[mes];
         let nombreMes = selectMes.options[selectMes.selectedIndex].text;
-        let mensaje = `☕ *BALANCE CAFETERÍA - ${nombreMes.toUpperCase()}*\n\n➕ Ingresos: $${d.ingresos}\n➖ Gastos: $${d.gastos}\n💰 *Saldo: $${d.ingresos - d.gastos}*\n\n_Reporte de Tesorería_`;
+        let mensaje = `☕ *BALANCE CAFETERÍA - ${nombreMes.toUpperCase()}*\n\n➕ Ingresos: $${d.ingresos}\n➖ Gastos: $${d.gastos}\n💰 *Saldo: $${d.ingresos - d.gastos}*`;
         window.open(`https://wa.me/?text=${encodeURIComponent(mensaje)}`);
     }
 
     function limpiarDatos() {
-        if(confirm("¿Borrar TODO el historial de todos los meses?")) {
-            localStorage.clear();
-            location.reload();
-        }
+        if(confirm("¿Borrar todo?")) { localStorage.clear(); location.reload(); }
     }
 
     actualizarInterfaz();
