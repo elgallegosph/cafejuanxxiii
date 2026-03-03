@@ -10,13 +10,11 @@
         .container { width: 100%; max-width: 550px; background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
         h1, h3 { text-align: center; margin-bottom: 10px; }
         
-        /* Título Principal */
         .titulo-principal { text-align: center; color: var(--cafe); margin-bottom: 20px; border-bottom: 2px solid var(--cafe); padding-bottom: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
 
         .selector-mes { display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 20px; background: #eee; padding: 10px; border-radius: 10px; }
         .balance-card { text-align: center; font-size: 1.8em; font-weight: bold; background: var(--cafe); color: white; padding: 15px; border-radius: 15px; margin-bottom: 20px; }
         
-        /* Gráficos de Tazas */
         .graficos-tazas { display: flex; justify-content: space-around; align-items: flex-end; margin: 30px 0; gap: 10px; }
         .taza-col { text-align: center; flex: 1; }
         .taza-wrapper { position: relative; width: 70px; height: 55px; margin: 0 auto; border: 4px solid var(--cafe); border-radius: 5px 5px 30px 30px; background: #fff; overflow: hidden; }
@@ -40,6 +38,7 @@
         .btn-print { background-color: #546e7a; color: white; }
         .btn-total { background-color: var(--azul); color: white; }
         .btn-excel { background-color: var(--navy); color: white; }
+        .btn-import { background-color: #795548; color: white; }
         
         .historial { margin-top: 20px; max-height: 250px; overflow-y: auto; font-size: 0.9em; border-top: 1px solid #ddd; padding-top: 10px; }
         .item-mov { padding: 8px 0; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
@@ -132,6 +131,10 @@
         <button class="btn-wa" onclick="enviarWhatsApp('mes')">📲 Reporte del Mes (WhatsApp)</button>
         <button class="btn-total" onclick="enviarWhatsApp('total')">🌎 Reporte Anual (WhatsApp)</button>
         <button class="btn-excel" onclick="exportarExcel()">📊 Descargar Reporte Excel (.csv)</button>
+        
+        <button class="btn-import" onclick="document.getElementById('input-file').click()">📂 Cargar Respaldo CSV</button>
+        <input type="file" id="input-file" style="display:none" accept=".csv" onchange="importarCSV(this)">
+
         <button class="btn-print" onclick="prepararImpresion('mes')">🖨️ Imprimir Balance Mensual</button>
         <button class="btn-print" style="background-color: #37474f;" onclick="prepararImpresion('total')">📜 Imprimir Historial Completo</button>
         
@@ -255,9 +258,10 @@
     function exportarExcel() {
         let ac = calcularAcumulado();
         if (ac.historialCompleto.length === 0) return alert("No hay datos.");
+        // Usamos comillas para evitar problemas con comas en los nombres
         let csvContent = "data:text/csv;charset=utf-8,Mes,Tipo,Descripcion,Monto\n";
         ac.historialCompleto.forEach(m => {
-            csvContent += `${m.mesLabel},${m.tipo === 'ingreso' ? "Ingreso" : "Gasto"},${m.nombre},${m.monto}\n`;
+            csvContent += `${m.mesLabel},${m.tipo === 'ingreso' ? "Ingreso" : "Gasto"},"${m.nombre}",${m.monto}\n`;
         });
         const link = document.createElement("a");
         link.setAttribute("href", encodeURI(csvContent));
@@ -265,6 +269,54 @@
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+    }
+
+    function importarCSV(input) {
+        const file = input.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const text = e.target.result;
+            const filas = text.split("\n");
+            let nuevaDB = {};
+
+            // Empezamos en 1 para saltar el encabezado
+            for (let i = 1; i < filas.length; i++) {
+                if (!filas[i].trim()) continue;
+                
+                // Regex para manejar descripciones con comillas
+                const partes = filas[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                if (partes.length < 4) continue;
+
+                let mes = partes[0].trim();
+                let tipoRaw = partes[1].trim();
+                let nombre = partes[2].replace(/"/g, "").trim();
+                let monto = parseFloat(partes[3]);
+
+                if (!nuevaDB[mes]) nuevaDB[mes] = { ingresos: 0, gastos: 0, historial: [] };
+                
+                let tipo = tipoRaw.toLowerCase() === "ingreso" ? "ingreso" : "gasto";
+                
+                if (tipo === "ingreso") nuevaDB[mes].ingresos += monto;
+                else nuevaDB[mes].gastos += monto;
+
+                nuevaDB[mes].historial.push({ tipo, nombre, monto, fecha: "Importado" });
+            }
+
+            if (Object.keys(nuevaDB).length > 0) {
+                if (confirm("Se encontraron datos. ¿Deseas reemplazar el historial actual con este archivo?")) {
+                    db = nuevaDB;
+                    localStorage.setItem('cafeteria_vFinal', JSON.stringify(db));
+                    actualizarInterfaz();
+                    alert("¡Datos importados con éxito!");
+                }
+            } else {
+                alert("No se reconoció el formato del archivo.");
+            }
+        };
+        reader.readAsText(file);
+        input.value = ""; // Reset del input
     }
 
     function prepararImpresion(modo) {
