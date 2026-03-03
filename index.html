@@ -42,6 +42,9 @@
         .item-mov { padding: 6px 0; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
         .fecha-mov { font-size: 0.75em; color: #777; display: block; }
         
+        .btn-del { background: none; border: none; color: #ccc; cursor: pointer; font-size: 14px; padding: 0 5px; }
+        .btn-del:hover { color: var(--rojo); }
+
         @media print { 
             .no-print { display: none !important; } 
             body { background: white; padding: 0; }
@@ -49,6 +52,7 @@
             .historial { max-height: none; overflow: visible; }
             .taza-wrapper { border: 2px solid #000; }
             .tabla-totales { display: table; }
+            .btn-del { display: none; }
         }
     </style>
 </head>
@@ -153,8 +157,8 @@
         Object.keys(db).sort().forEach(mesKey => {
             totalI += db[mesKey].ingresos;
             totalG += db[mesKey].gastos;
-            db[mesKey].historial.forEach(mov => {
-                todosLosMovimientos.push({ ...mov, mesLabel: mesKey });
+            db[mesKey].historial.forEach((mov, index) => {
+                todosLosMovimientos.push({ ...mov, mesLabel: mesKey, originalIndex: index });
             });
         });
         return { ingresos: totalI, gastos: totalG, saldo: totalI - totalG, historialCompleto: todosLosMovimientos };
@@ -175,7 +179,6 @@
         document.getElementById('txt-gastos').innerText = gStr;
         document.getElementById('txt-saldo').innerText = sStr;
 
-        // Actualizar tabla oculta de impresión
         document.getElementById('td-ingresos').innerText = iStr;
         document.getElementById('td-gastos').innerText = gStr;
         document.getElementById('td-saldo').innerText = sStr;
@@ -193,12 +196,29 @@
         actualizarGraficos(datos.ingresos, datos.gastos, saldo);
 
         const lista = document.getElementById('lista-movimientos');
-        lista.innerHTML = datos.historial.map(m => `
+        lista.innerHTML = datos.historial.map((m, index) => `
             <div class="item-mov">
-                <span><strong>${m.tipo === 'ingreso' ? '➕' : '➖'}</strong> ${m.nombre}</span>
+                <span>
+                    <button class="btn-del no-print" onclick="eliminarRegistro('${mesSel}', ${index})">🗑️</button>
+                    <strong>${m.tipo === 'ingreso' ? '➕' : '➖'}</strong> ${m.nombre}
+                </span>
                 <span>$${m.monto.toLocaleString()}</span>
             </div>
         `).reverse().join('');
+    }
+
+    function eliminarRegistro(mes, index) {
+        if(confirm("¿Estás seguro de eliminar este registro? Los totales se recalcularán.")) {
+            let registro = db[mes].historial[index];
+            if(registro.tipo === 'ingreso') {
+                db[mes].ingresos -= registro.monto;
+            } else {
+                db[mes].gastos -= registro.monto;
+            }
+            db[mes].historial.splice(index, 1);
+            localStorage.setItem('cafeteria_vFinal', JSON.stringify(db));
+            actualizarInterfaz();
+        }
     }
 
     function prepararImpresion(modo) {
