@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cafetería Escolar - Reporte Maestro</title>
     <style>
-        :root { --cafe: #4e342e; --crema: #f4f1ea; --verde: #4caf50; --rojo: #e53935; --azul: #2196f3; }
+        :root { --cafe: #4e342e; --crema: #f4f1ea; --verde: #4caf50; --rojo: #e53935; --azul: #2196f3; --navy: #1a237e; }
         body { font-family: 'Segoe UI', sans-serif; background-color: var(--crema); color: var(--cafe); padding: 20px; display: flex; justify-content: center; }
         .container { width: 100%; max-width: 550px; background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
         h1, h3 { text-align: center; margin-bottom: 10px; }
@@ -25,7 +25,6 @@
         .liq-gasto { background: var(--rojo) !important; -webkit-print-color-adjust: exact; }
         .liq-saldo { background: #6f4e37 !important; -webkit-print-color-adjust: exact; }
 
-        /* Cuadro de Totales para Impresión */
         .tabla-totales { width: 100%; border-collapse: collapse; margin: 20px 0; display: none; }
         .tabla-totales td, .tabla-totales th { border: 1px solid #ddd; padding: 10px; text-align: left; }
         .tabla-totales th { background-color: #f8f8f8; }
@@ -37,6 +36,7 @@
         .btn-wa { background-color: #25d366; color: white; }
         .btn-print { background-color: #546e7a; color: white; }
         .btn-total { background-color: var(--azul); color: white; }
+        .btn-excel { background-color: var(--navy); color: white; }
         
         .historial { margin-top: 20px; max-height: 250px; overflow-y: auto; font-size: 0.9em; border-top: 1px solid #ddd; padding-top: 10px; }
         .item-mov { padding: 6px 0; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
@@ -126,6 +126,7 @@
         <hr>
         <button class="btn-wa" onclick="enviarWhatsApp('mes')">📲 Reporte del Mes (WhatsApp)</button>
         <button class="btn-total" onclick="enviarWhatsApp('total')">🌎 Reporte Anual (WhatsApp)</button>
+        <button class="btn-excel" onclick="exportarExcel()">📊 Descargar Reporte Excel (.csv)</button>
         <button class="btn-print" onclick="prepararImpresion('mes')">🖨️ Imprimir Balance Mensual</button>
         <button class="btn-print" style="background-color: #37474f;" onclick="prepararImpresion('total')">📜 Imprimir Historial Completo</button>
         
@@ -199,7 +200,7 @@
         lista.innerHTML = datos.historial.map((m, index) => `
             <div class="item-mov">
                 <span>
-                    <button class="btn-del no-print" onclick="eliminarRegistro('${mesSel}', ${index})">🗑️</button>
+                    <button class="btn-del no-print" title="Borrar" onclick="eliminarRegistro('${mesSel}', ${index})">🗑️</button>
                     <strong>${m.tipo === 'ingreso' ? '➕' : '➖'}</strong> ${m.nombre}
                 </span>
                 <span>$${m.monto.toLocaleString()}</span>
@@ -219,6 +220,27 @@
             localStorage.setItem('cafeteria_vFinal', JSON.stringify(db));
             actualizarInterfaz();
         }
+    }
+
+    function exportarExcel() {
+        let ac = calcularAcumulado();
+        if (ac.historialCompleto.length === 0) return alert("No hay datos para exportar.");
+
+        let csvContent = "data:text/csv;charset=utf-8,";
+        csvContent += "Mes,Tipo,Descripcion,Monto\n";
+        
+        ac.historialCompleto.forEach(m => {
+            let tipo = m.tipo === 'ingreso' ? "Ingreso" : "Gasto";
+            csvContent += `${m.mesLabel},${tipo},${m.nombre},${m.monto}\n`;
+        });
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `Reporte_Cafeteria_${new Date().toLocaleDateString()}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
 
     function prepararImpresion(modo) {
