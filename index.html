@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cafetería Escolar - Reporte Maestro</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         :root { --cafe: #4e342e; --crema: #f4f1ea; --verde: #4caf50; --rojo: #e53935; --azul: #2196f3; --navy: #1a237e; }
         body { font-family: 'Segoe UI', sans-serif; background-color: var(--crema); color: var(--cafe); padding: 20px; display: flex; justify-content: center; }
@@ -59,7 +58,7 @@
 </head>
 <body>
 
-<div class="container" id="pdf-area">
+<div class="container">
     <div class="no-print">
         <h1>☕ Cafetería Escolar</h1>
         <div class="selector-mes">
@@ -93,7 +92,7 @@
             </div>
         </div>
 
-        <table class="tabla-totales" id="tabla-totales-print" style="display: table;">
+        <table class="tabla-totales" id="tabla-totales-print">
             <thead>
                 <tr>
                     <th>Concepto</th>
@@ -125,8 +124,8 @@
         <button class="btn-gasto" onclick="agregarRegistro('gasto')">Registrar Gasto</button>
 
         <hr>
-        <button class="btn-wa" onclick="generarPDF_WhatsApp('mes')">📲 Generar PDF del Mes para WhatsApp</button>
-        <button class="btn-total" onclick="generarPDF_WhatsApp('total')">🌎 Generar PDF Anual para WhatsApp</button>
+        <button class="btn-wa" onclick="enviarWhatsApp('mes')">📲 Reporte del Mes (WhatsApp)</button>
+        <button class="btn-total" onclick="enviarWhatsApp('total')">🌎 Reporte Anual (WhatsApp)</button>
         <button class="btn-excel" onclick="exportarExcel()">📊 Descargar Reporte Excel (.csv)</button>
         <button class="btn-print" onclick="prepararImpresion('mes')">🖨️ Imprimir Balance Mensual</button>
         <button class="btn-print" style="background-color: #37474f;" onclick="prepararImpresion('total')">📜 Imprimir Historial Completo</button>
@@ -225,45 +224,6 @@
         }
     }
 
-    function generarPDF_WhatsApp(modo) {
-        const elemento = document.getElementById('pdf-area');
-        const originalTitle = document.getElementById('titulo-historial').innerText;
-        const originalLista = document.getElementById('lista-movimientos').innerHTML;
-        const profTel = document.getElementById('prof-tel').value;
-
-        if (modo === 'total') {
-            let ac = calcularAcumulado();
-            document.getElementById('titulo-historial').innerText = `REPORTE MAESTRO - HISTORIAL COMPLETO`;
-            actualizarGraficos(ac.ingresos, ac.gastos, ac.saldo);
-            document.getElementById('lista-movimientos').innerHTML = ac.historialCompleto.map(m => `
-                <div class="item-mov">
-                    <span><small>${m.mesLabel}</small> <strong>${m.tipo === 'ingreso' ? '➕' : '➖'}</strong> ${m.nombre}</span>
-                    <span>$${m.monto.toLocaleString()}</span>
-                </div>
-            `).reverse().join('');
-        }
-
-        const opt = {
-            margin: 10,
-            filename: `Reporte_Cafeteria_${modo}.pdf`,
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2 },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        };
-
-        alert("Se generará el PDF. Guárdalo y luego selecciónalo en WhatsApp.");
-        
-        html2pdf().set(opt).from(elemento).save().then(() => {
-            document.getElementById('titulo-historial').innerText = originalTitle;
-            document.getElementById('lista-movimientos').innerHTML = originalLista;
-            actualizarInterfaz();
-            
-            // Abrir WhatsApp después de generar
-            let tel = profTel || "";
-            window.open(`https://wa.me/${tel}`);
-        });
-    }
-
     function exportarExcel() {
         let ac = calcularAcumulado();
         if (ac.historialCompleto.length === 0) return alert("No hay datos.");
@@ -325,6 +285,18 @@
             limpiarInputs();
             actualizarInterfaz();
         }
+    }
+
+    function enviarWhatsApp(modo) {
+        let msg = "";
+        if (modo === 'mes') {
+            let d = db[selectMes.value];
+            msg = `☕ *BALANCE ${selectMes.options[selectMes.selectedIndex].text}*\n➕ In: $${d.ingresos.toLocaleString()}\n➖ Out: $${d.gastos.toLocaleString()}\n💰 *Saldo: $${(d.ingresos - d.gastos).toLocaleString()}*`;
+        } else {
+            let ac = calcularAcumulado();
+            msg = `🌎 *BALANCE GLOBAL*\n💰 In: $${ac.ingresos.toLocaleString()}\n💸 Out: $${ac.gastos.toLocaleString()}\n💎 *Saldo: $${ac.saldo.toLocaleString()}*`;
+        }
+        window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`);
     }
 
     function limpiarInputs() {
