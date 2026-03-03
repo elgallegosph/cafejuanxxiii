@@ -3,89 +3,146 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cafetería Escolar - Control</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>Cafetería Escolar Pro</title>
     <style>
-        body { font-family: sans-serif; background-color: #f4f1ea; padding: 20px; color: #4e342e; }
-        .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        h1 { text-align: center; color: #6d4c41; }
-        input, button { width: 100%; padding: 10px; margin: 10px 0; border-radius: 5px; border: 1px solid #ccc; }
-        button { background-color: #795548; color: white; cursor: pointer; font-weight: bold; }
-        .balance-card { text-align: center; font-size: 1.5em; background: #efebe9; padding: 15px; border-radius: 10px; }
+        :root { --cafe: #4e342e; --crema: #f4f1ea; --accent: #795548; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--crema); color: var(--cafe); padding: 20px; display: flex; justify-content: center; }
+        .container { width: 100%; max-width: 500px; background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        h1, h3 { text-align: center; margin-bottom: 10px; }
         
-        /* Animación de la Greca y Taza */
-        .cafe-container { text-align: center; margin: 20px 0; position: relative; }
-        .taza { width: 100px; height: 80px; background: #fff; border: 4px solid #4e342e; border-radius: 0 0 40px 40px; margin: 20px auto; position: relative; overflow: hidden; }
-        .liquido { background: #4e342e; width: 100%; position: absolute; bottom: 0; transition: height 1s ease-in-out; }
+        .balance-card { text-align: center; font-size: 1.8em; font-weight: bold; background: var(--cafe); color: white; padding: 20px; border-radius: 15px; margin-bottom: 20px; }
+        
+        /* Animación de la Taza */
+        .cafe-container { text-align: center; margin: 30px 0; }
+        .taza-wrapper { position: relative; width: 120px; height: 90px; margin: 0 auto; border: 5px solid var(--cafe); border-radius: 5px 5px 50px 50px; background: #fff; overflow: hidden; }
+        .taza-asa { position: absolute; right: -20px; top: 20px; width: 30px; height: 40px; border: 5px solid var(--cafe); border-radius: 50%; z-index: -1; }
+        .liquido { position: absolute; bottom: 0; width: 100%; background: #6f4e37; transition: height 0.8s ease-in-out; }
+        
+        input { width: calc(100% - 22px); padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; }
+        button { width: 100%; padding: 14px; margin: 10px 0; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s; font-size: 16px; }
+        .btn-aporte { background-color: #4caf50; color: white; }
+        .btn-gasto { background-color: #e53935; color: white; }
+        .btn-wa { background-color: #25d366; color: white; }
+        .btn-print { background-color: #546e7a; color: white; }
+        
+        .historial { margin-top: 20px; max-height: 200px; overflow-y: auto; font-size: 0.9em; border-top: 1px solid #ddd; padding-top: 10px; }
+        @media print { .no-print { display: none; } }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>☕ Control Cafetería</h1>
-    
-    <div class="balance-card">
-        Saldo Actual: $<span id="saldo-total">0</span>
-    </div>
+    <div class="no-print">
+        <h1>☕ Cafetería Escolar</h1>
+        <div class="balance-card">Saldo: $<span id="saldo-total">0</span></div>
 
-    <div class="cafe-container">
-        <div class="taza">
-            <div id="cafe-nivel" class="liquido" style="height: 0%;"></div>
+        <div class="cafe-container">
+            <div style="position: relative; width: fit-content; margin: auto;">
+                <div class="taza-wrapper">
+                    <div id="cafe-nivel" class="liquido" style="height: 0%;"></div>
+                </div>
+                <div class="taza-asa"></div>
+            </div>
+            <p><small>Nivel de Presupuesto</small></p>
         </div>
-        <p>Nivel de Presupuesto</p>
+
+        <h3>➕ Registrar Aporte</h3>
+        <input type="text" id="prof-nombre" placeholder="Nombre (Opcional)">
+        <input type="tel" id="prof-tel" placeholder="Número de WhatsApp (Ej: 57300...)">
+        <input type="number" id="prof-monto" placeholder="Monto del Aporte $">
+        <button class="btn-aporte" onclick="agregarAporte()">Registrar Aporte</button>
+
+        <h3>➖ Registrar Gasto</h3>
+        <input type="text" id="gasto-nombre" placeholder="Concepto del gasto (Azúcar, Café...)">
+        <input type="number" id="gasto-monto" placeholder="Monto del Gasto $">
+        <button class="btn-gasto" onclick="agregarGasto()">Registrar Gasto</button>
+
+        <hr>
+        <button class="btn-wa" onclick="enviarReporteGeneral()">📲 WhatsApp General</button>
+        <button class="btn-print" onclick="window.print()">🖨️ Imprimir Balance</button>
+        <button onclick="limpiarDatos()" style="background:none; color: grey; font-size: 11px;">Borrar todos los datos</button>
     </div>
 
-    <h3>➕ Registrar Aporte (Profesor)</h3>
-    <input type="text" id="prof-nombre" placeholder="Nombre del Profesor">
-    <input type="number" id="prof-monto" placeholder="Monto $">
-    <button onclick="agregarAporte()">Agregar Aporte</button>
-
-    <h3>➖ Registrar Gasto</h3>
-    <input type="text" id="gasto-nombre" placeholder="¿En qué se gastó?">
-    <input type="number" id="gasto-monto" placeholder="Monto $">
-    <button onclick="agregarGasto()" style="background-color: #d32f2f;">Registrar Gasto</button>
-
-    <hr>
-    <button onclick="enviarWhatsApp()">📲 Enviar Balance por WhatsApp</button>
-    <button onclick="window.print()" style="background-color: #455a64;">🖨️ Imprimir Reporte</button>
+    <div id="seccion-impresion">
+        <h3>Historial de Movimientos</h3>
+        <div id="lista-movimientos" class="historial"></div>
+    </div>
 </div>
 
 <script>
-    let ingresos = 0;
-    let gastos = 0;
+    let datos = JSON.parse(localStorage.getItem('cafeteria_datos')) || { ingresos: 0, gastos: 0, historial: [] };
+
+    function guardar() {
+        localStorage.setItem('cafeteria_datos', JSON.stringify(datos));
+        actualizarInterfaz();
+    }
 
     function actualizarInterfaz() {
-        let saldo = ingresos - gastos;
+        let saldo = datos.ingresos - datos.gastos;
         document.getElementById('saldo-total').innerText = saldo.toLocaleString();
         
-        // Calcular porcentaje para la taza (máximo 100%)
-        let porcentaje = (ingresos > 0) ? (saldo / ingresos) * 100 : 0;
+        // Animación taza
+        let porcentaje = (datos.ingresos > 0) ? (saldo / datos.ingresos) * 100 : 0;
         document.getElementById('cafe-nivel').style.height = Math.max(0, Math.min(porcentaje, 100)) + "%";
+
+        // Lista de movimientos
+        const lista = document.getElementById('lista-movimientos');
+        lista.innerHTML = datos.historial.map(m => `<div><strong>${m.tipo}:</strong> ${m.nombre} - $${m.monto}</div>`).reverse().join('');
     }
 
     function agregarAporte() {
+        let nombre = document.getElementById('prof-nombre').value || "Anónimo";
+        let tel = document.getElementById('prof-tel').value || "";
         let monto = parseFloat(document.getElementById('prof-monto').value);
+
         if (monto > 0) {
-            ingresos += monto;
-            actualizarInterfaz();
-            document.getElementById('prof-monto').value = '';
+            datos.ingresos += monto;
+            datos.historial.push({ tipo: 'Aporte', nombre: nombre, monto: monto, tel: tel });
+            
+            // Si tiene teléfono, ofrecer enviar recibo individual
+            if(tel !== "") {
+                if(confirm("¿Quieres enviar comprobante por WhatsApp a este profesor?")) {
+                    let msg = `✅ *Recibo Cafetería*%0AHola ${nombre}, recibimos tu aporte de $${monto}. ¡Gracias!`;
+                    window.open(`https://wa.me/${tel}?text=${msg}`);
+                }
+            }
+            
+            limpiarInputs(['prof-nombre', 'prof-tel', 'prof-monto']);
+            guardar();
         }
     }
 
     function agregarGasto() {
+        let concepto = document.getElementById('gasto-nombre').value || "Gasto vario";
         let monto = parseFloat(document.getElementById('gasto-monto').value);
+
         if (monto > 0) {
-            gastos += monto;
-            actualizarInterfaz();
-            document.getElementById('gasto-monto').value = '';
+            datos.gastos += monto;
+            datos.historial.push({ tipo: 'Gasto', nombre: concepto, monto: monto });
+            limpiarInputs(['gasto-nombre', 'gasto-monto']);
+            guardar();
         }
     }
 
-    function enviarWhatsApp() {
-        let saldo = ingresos - gastos;
-        let mensaje = `☕ *Reporte Cafetería*%0A------------------%0ATotal Ingresos: $${ingresos}%0ATotal Gastos: $${gastos}%0A*Saldo Disponible: $${saldo}*`;
+    function enviarReporteGeneral() {
+        let saldo = datos.ingresos - datos.gastos;
+        let mensaje = `☕ *BALANCE GENERAL CAFETERÍA*%0A--------------------------%0A➕ Total Aportes: $${datos.ingresos}%0A➖ Total Gastos: $${datos.gastos}%0A💰 *Saldo Disponible: $${saldo}*%0A--------------------------%0A_Reporte generado automáticamente._`;
         window.open(`https://wa.me/?text=${mensaje}`);
     }
+
+    function limpiarInputs(ids) {
+        ids.forEach(id => document.getElementById(id).value = '');
+    }
+
+    function limpiarDatos() {
+        if(confirm("¿Estás seguro de borrar todas las cuentas?")) {
+            localStorage.clear();
+            location.reload();
+        }
+    }
+
+    // Cargar datos al iniciar
+    actualizarInterfaz();
 </script>
 
 </body>
