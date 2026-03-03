@@ -106,7 +106,7 @@
             </tbody>
         </table>
 
-        <h3 id="titulo-historial">Movimientos del Mes</h3>
+        <h3 id="titulo-historial">Movimientos</h3>
         <div id="lista-movimientos" class="historial"></div>
     </div>
 
@@ -138,6 +138,12 @@
     let db = JSON.parse(localStorage.getItem('cafeteria_vFinal')) || {};
     const selectMes = document.getElementById('mes-filtro');
     
+    // Iniciar selector con opción de Total
+    let optTotal = document.createElement('option');
+    optTotal.value = "TOTAL_ANUAL";
+    optTotal.text = "📊 Ver Acumulado Total";
+    selectMes.appendChild(optTotal);
+
     const ahora = new Date();
     for(let i = -6; i <= 6; i++) {
         let d = new Date(ahora.getFullYear(), ahora.getMonth() + i, 1);
@@ -187,27 +193,46 @@
 
     function actualizarInterfaz() {
         let mesSel = selectMes.value;
-        asegurarMes(mesSel);
-        let datos = db[mesSel];
-        let saldo = datos.ingresos - datos.gastos;
+        let datosVisualizar, titulo;
+
+        if (mesSel === "TOTAL_ANUAL") {
+            let ac = calcularAcumulado();
+            datosVisualizar = { 
+                ingresos: ac.ingresos, 
+                gastos: ac.gastos, 
+                historial: ac.historialCompleto 
+            };
+            titulo = "Balance Acumulado Total";
+        } else {
+            asegurarMes(mesSel);
+            datosVisualizar = db[mesSel];
+            titulo = `Movimientos: ${selectMes.options[selectMes.selectedIndex].text}`;
+        }
         
+        let saldo = datosVisualizar.ingresos - datosVisualizar.gastos;
         document.getElementById('saldo-total').innerText = saldo.toLocaleString();
-        document.getElementById('titulo-historial').innerText = `Movimientos: ${selectMes.options[selectMes.selectedIndex].text}`;
+        document.getElementById('titulo-historial').innerText = titulo;
         
-        actualizarGraficos(datos.ingresos, datos.gastos, saldo);
+        actualizarGraficos(datosVisualizar.ingresos, datosVisualizar.gastos, saldo);
 
         const lista = document.getElementById('lista-movimientos');
-        lista.innerHTML = datos.historial.map((m, index) => `
+        lista.innerHTML = datosVisualizar.historial.map((m, index) => {
+            // El index en modo Total es diferente, por eso usamos mesLabel
+            let idMes = mesSel === "TOTAL_ANUAL" ? m.mesLabel : mesSel;
+            let realIdx = mesSel === "TOTAL_ANUAL" ? m.originalIndex : index;
+            
+            return `
             <div class="item-mov">
                 <div class="mov-info">
+                    ${mesSel === "TOTAL_ANUAL" ? `<small style="color:grey;margin-right:5px;">[${m.mesLabel.split('-')[1]}]</small>` : ''}
                     <strong>${m.tipo === 'ingreso' ? '➕' : '➖'}</strong> ${m.nombre}
                 </div>
                 <div class="mov-valores">
                     <span>$${m.monto.toLocaleString()}</span>
-                    <button class="btn-del no-print" onclick="eliminarRegistro('${mesSel}', ${index})">🗑️</button>
+                    <button class="btn-del no-print" onclick="eliminarRegistro('${idMes}', ${realIdx})">🗑️</button>
                 </div>
             </div>
-        `).reverse().join('');
+        `}).reverse().join('');
     }
 
     function eliminarRegistro(mes, index) {
@@ -263,6 +288,11 @@
 
     function agregarRegistro(tipo) {
         let mesSel = selectMes.value;
+        // Si está en modo TOTAL, guardamos en el mes actual real
+        if(mesSel === "TOTAL_ANUAL") {
+            mesSel = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}`;
+        }
+        
         asegurarMes(mesSel);
         let nombre, monto, tel = "";
         if (tipo === 'ingreso') {
@@ -290,7 +320,12 @@
     function enviarWhatsApp(modo) {
         let msg = "";
         if (modo === 'mes') {
-            let d = db[selectMes.value];
+            let mesVal = selectMes.value;
+            if(mesVal === "TOTAL_ANUAL") {
+                enviarWhatsApp('total');
+                return;
+            }
+            let d = db[mesVal];
             msg = `☕ *BALANCE ${selectMes.options[selectMes.selectedIndex].text}*\n➕ In: $${d.ingresos.toLocaleString()}\n➖ Out: $${d.gastos.toLocaleString()}\n💰 *Saldo: $${(d.ingresos - d.gastos).toLocaleString()}*`;
         } else {
             let ac = calcularAcumulado();
