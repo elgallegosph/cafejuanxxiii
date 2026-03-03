@@ -3,13 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cafetería Escolar - Reporte Maestro</title>
+    <title>GATOS CAFETERIA JUAN XXIII</title>
     <style>
         :root { --cafe: #4e342e; --crema: #f4f1ea; --verde: #4caf50; --rojo: #e53935; --azul: #2196f3; --navy: #1a237e; }
         body { font-family: 'Segoe UI', sans-serif; background-color: var(--crema); color: var(--cafe); padding: 20px; display: flex; justify-content: center; }
         .container { width: 100%; max-width: 550px; background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
         h1, h3 { text-align: center; margin-bottom: 10px; }
         
+        /* Título Principal */
+        .titulo-principal { text-align: center; color: var(--cafe); margin-bottom: 20px; border-bottom: 2px solid var(--cafe); padding-bottom: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+
         .selector-mes { display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 20px; background: #eee; padding: 10px; border-radius: 10px; }
         .balance-card { text-align: center; font-size: 1.8em; font-weight: bold; background: var(--cafe); color: white; padding: 15px; border-radius: 15px; margin-bottom: 20px; }
         
@@ -53,14 +56,16 @@
             .historial { max-height: none; overflow: visible; }
             .taza-wrapper { border: 2px solid #000; }
             .tabla-totales { display: table; }
+            .titulo-principal { display: block !important; }
         }
     </style>
 </head>
 <body>
 
 <div class="container">
+    <h1 class="titulo-principal">GATOS CAFETERIA JUAN XXIII</h1>
+
     <div class="no-print">
-        <h1>☕ Cafetería Escolar</h1>
         <div class="selector-mes">
             <select id="mes-filtro" onchange="actualizarInterfaz()"></select>
         </div>
@@ -138,7 +143,6 @@
     let db = JSON.parse(localStorage.getItem('cafeteria_vFinal')) || {};
     const selectMes = document.getElementById('mes-filtro');
     
-    // Iniciar selector con opción de Total
     let optTotal = document.createElement('option');
     optTotal.value = "TOTAL_ANUAL";
     optTotal.text = "📊 Ver Acumulado Total";
@@ -217,7 +221,6 @@
 
         const lista = document.getElementById('lista-movimientos');
         lista.innerHTML = datosVisualizar.historial.map((m, index) => {
-            // El index en modo Total es diferente, por eso usamos mesLabel
             let idMes = mesSel === "TOTAL_ANUAL" ? m.mesLabel : mesSel;
             let realIdx = mesSel === "TOTAL_ANUAL" ? m.originalIndex : index;
             
@@ -288,7 +291,6 @@
 
     function agregarRegistro(tipo) {
         let mesSel = selectMes.value;
-        // Si está en modo TOTAL, guardamos en el mes actual real
         if(mesSel === "TOTAL_ANUAL") {
             mesSel = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}`;
         }
